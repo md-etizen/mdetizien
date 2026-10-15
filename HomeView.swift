@@ -4,6 +4,7 @@ struct HomeView: View {
     @EnvironmentObject var store: BillStore
     @State private var month = Date().startOfMonth
     @State private var sheet: SheetItem?
+    @State private var showBulk = false
 
     private struct SheetItem: Identifiable {
         let id = UUID()
@@ -27,20 +28,38 @@ struct HomeView: View {
                 .padding(.top, 8)
             }
 
-            Button {
-                sheet = SheetItem(bill: nil, presetCategory: nil)
+            Menu {
+                Button {
+                    sheet = SheetItem(bill: nil, presetCategory: nil)
+                } label: {
+                    Label("Add one bill", systemImage: "plus.circle")
+                }
+                Button {
+                    showBulk = true
+                } label: {
+                    Label("Add many months at once", systemImage: "calendar.badge.plus")
+                }
             } label: {
-                Label("Add Bill", systemImage: "plus")
+                Label("Add", systemImage: "plus")
+                    .glossyCapsule()
             }
-            .buttonStyle(GlossyButtonStyle())
             .padding(.trailing, 20)
             .padding(.bottom, 84)
         }
         .onAppear {
-            // "-add" launch flag opens the Add Bill sheet (used for cloud screenshots).
-            if ProcessInfo.processInfo.arguments.contains("-add") {
+            // Launch flags used only for cloud screenshots.
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-add") {
                 sheet = SheetItem(bill: nil, presetCategory: .electricity)
             }
+            if args.contains("-bulk") {
+                showBulk = true
+            }
+        }
+        .sheet(isPresented: $showBulk) {
+            BulkAddView()
+                .environmentObject(store)
+                .presentationDetents([.large])
         }
         .sheet(item: $sheet) { item in
             AddBillView(month: month, editing: item.bill, presetCategory: item.presetCategory)
