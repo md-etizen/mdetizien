@@ -146,6 +146,45 @@ struct GlossyButtonStyle: ButtonStyle {
     }
 }
 
+// MARK: - Glossy capsule look for non-Button views (e.g. a Menu label)
+
+struct GlossyCapsule: ViewModifier {
+    var tint: Color = Aero.buttonBottom
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(.headline, design: .rounded).weight(.bold))
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 14)
+            .background(
+                ZStack {
+                    Capsule().fill(
+                        LinearGradient(colors: [Aero.buttonTop, tint],
+                                       startPoint: .top, endPoint: .bottom))
+                    Capsule()
+                        .fill(
+                            LinearGradient(colors: [.white.opacity(0.75), .white.opacity(0.05)],
+                                           startPoint: .top, endPoint: .bottom))
+                        .padding(3)
+                        .mask(VStack(spacing: 0) {
+                            Rectangle().frame(height: 22)
+                            Spacer(minLength: 0)
+                        })
+                }
+            )
+            .overlay(Capsule().stroke(.white.opacity(0.8), lineWidth: 1.5))
+            .shadow(color: tint.opacity(0.5), radius: 10, y: 6)
+    }
+}
+
+extension View {
+    func glossyCapsule(tint: Color = Aero.buttonBottom) -> some View {
+        modifier(GlossyCapsule(tint: tint))
+    }
+}
+
 // MARK: - Round glossy icon button (chevrons etc.)
 
 struct BubbleIconButton: View {
