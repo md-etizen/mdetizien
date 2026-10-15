@@ -1,4 +1,3 @@
-
 name: Build and screenshot
 
 on:
@@ -62,6 +61,11 @@ jobs:
           xcrun simctl launch "$UDID" com.example.BillBubbles -seed -add
           sleep 5
           xcrun simctl io "$UDID" screenshot shots/3-add-bill.png
+          xcrun simctl terminate "$UDID" com.example.BillBubbles
+
+          xcrun simctl launch "$UDID" com.example.BillBubbles -seed -bulk
+          sleep 5
+          xcrun simctl io "$UDID" screenshot shots/4-add-many.png
 
       - name: Upload screenshots
         if: always()
