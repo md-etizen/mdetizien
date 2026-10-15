@@ -1,0 +1,79 @@
+name: Build and screenshot
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          devices = json.load(sys.stdin)['devices']
+          runtimes = sorted(k for k in devices if 'iOS' in k)
+          for rt in reversed(runtimes):
+              phones = [d for d in devices[rt] if 'iPhone' in d['name']]
+              if phones:
+                  print(phones[0]['udid'])
+                  break
+          ")
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "Using simulator $UDID"
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild -project BillBubbles.xcodeproj -scheme BillBubbles \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build 2>&1 | tee xcodebuild.log
+
+      - name: Run in simulator and take screenshots
+        run: |
+          UDID=${{ steps.sim.outputs.udid }}
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          APP=$(find build/Build/Products -name BillBubbles.app | head -1)
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p shots
+
+          xcrun simctl launch "$UDID" com.example.BillBubbles -seed
+          sleep 5
+          xcrun simctl io "$UDID" screenshot shots/1-bills.png
+          xcrun simctl terminate "$UDID" com.example.BillBubbles
+
+          xcrun simctl launch "$UDID" com.example.BillBubbles -seed -insights
+          sleep 5
+          xcrun simctl io "$UDID" screenshot shots/2-insights.png
+          xcrun simctl terminate "$UDID" com.example.BillBubbles
+
+          xcrun simctl launch "$UDID" com.example.BillBubbles -seed -add
+          sleep 5
+          xcrun simctl io "$UDID" screenshot shots/3-add-bill.png
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: shots
+          if-no-files-found: ignore
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
