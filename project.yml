@@ -7,10 +7,10 @@ targets:
   BillBubbles:
     type: application
     platform: iOS
-       sources:
-         - path: .
-           includes:
-             - "*.swift"
+    sources:
+      - path: .
+        includes:
+          - "*.swift"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.BillBubbles
